@@ -1,1 +1,1 @@
-This contains all the relation objects in trainPositive.pb separated out from 100000.pb to 119464.pb
+This contains all the relation objects in trainPositive.pb separated out from 100000.pb to 119464.pb after running RelationReader

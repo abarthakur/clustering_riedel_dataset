@@ -1,0 +1,1 @@
+Put filtered-freebase-simple-topic-dump-3cols.tsv in this directory.
