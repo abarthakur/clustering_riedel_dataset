@@ -1,0 +1,44 @@
+Manual Evaluation:
+Test Set: 
+As candidate relation instances we choose those entity pairs which appear together in the NYT test set, but for which at least one participating entity is not in Freebase.
+
+
+Train-positive: 
+  Number of buckets:  19465
+  Mean sentences per bucket: 121867/19465 = 6.26
+  Median sentences per bucket:  1
+  Max sentences per bucket: 1251
+  No. of buckets with one sentence: 10326
+  No. of unique relations: 24
+
+Train-negative:
+  Number of buckets:  226576
+  Mean sentences per bucket: 322249/226576 = 1.42
+  Median sentences per bucket:
+  No. of buckets with one sentence:
+
+Held-out Evaluation 
+Train-positive: 
+  Number of buckets:  4700
+  Mean sentences per bucket: 34811/4700 = 7.40
+  Median sentences per bucket:
+  No. of buckets with one sentence:
+
+Train-negative:
+  Number of buckets:  63596
+  Mean sentences per bucket: 91373/63596 = 1.43
+  Median sentences per bucket:
+  No. of buckets with one sentence:
+  
+Test-positive:
+  Number of buckets:  1950
+  Mean sentences per bucket: 6444/1950 = 1.37
+  Median sentences per bucket:
+  No. of buckets with one sentence:
+  
+Test-negative:
+  Number of buckets:  94929
+  Mean sentences per bucket: 166004/94929 = 1.74
+  Median sentences per bucket:
+  No. of buckets with one sentence:
+
