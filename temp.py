@@ -1,6 +1,9 @@
 import Document_pb2	
 import reader2
 from collections import deque
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 def shortestDP(treeList,e1,e2,toklist):
 	#preprocess
@@ -20,25 +23,17 @@ def shortestDP(treeList,e1,e2,toklist):
 			y=x
 		adjlist[i+1]=[]
 		adjlist[i+1].append(y)
-	print "Before1",adjlist[24]
+
 	for i in range(e1[0]+1,e1[1]+1):
-		if (adjlist[i][0]!=e1[0]):
+		if (len(adjlist[i])>0 and adjlist[i][0]!=e1[0]): #skip the first word, skip words which are roots
 			adjlist[e1[0]].extend(adjlist[i])
 	
-	print "Before2",adjlist[24]
 	for i in range(e2[0]+1,e2[1]+1):
-		if (adjlist[i][0]!=e2[0]):
+		if (len(adjlist[i])>0 and adjlist[i][0]!=e2[0]):
 			adjlist[e2[0]].extend(adjlist[i])
 
-	#make unweighted 
-	
 
-	# for i in range(1,len(treeList)+1):
-	# 	if(treeList[i-1]==0) :
-	# 		adjlist[i]=[]
-	# 		continue
-	# 	adjlist[i]=[treeList[i-1]]
-	print "Before3",adjlist[24]
+	#make undirected 
 	for key in adjlist :
 		for neighbour in adjlist[key]:
 			# print "#####\n"+str(key)
@@ -46,7 +41,6 @@ def shortestDP(treeList,e1,e2,toklist):
 			# print neighbour
 			if key not in adjlist[neighbour]:
 				adjlist[neighbour].append(key)
-	print "After3",adjlist[24]
 	#do bfs
 
 	q= deque()
@@ -60,33 +54,36 @@ def shortestDP(treeList,e1,e2,toklist):
 			u=q.popleft()
 		except IndexError:
 			break
-		print str(u) + ": Popped!"
-		print adjlist[u]
+		# print str(u) + ": Popped!"
+		# print adjlist[u]
 		for v in adjlist[u]:
 			try :
 				t=visited[v]
-				print str(v) + ": Visited already"
+				# print str(v) + ": Visited already"
 			except KeyError:
-				print  str(v) +": Newly visited"
+				# print  str(v) +": Newly visited"
 				q.append(v)
 				visited[v]=True
 				pred [v]= u 
 
-	#########
-	print "\n"
-	for i in range(1,len(treeList)+1):
-		# print visited[i]
-		print str(i) +": " + str(pred[i])
+	# print "\nPredecessors\n"
+	# for i in range(1,len(treeList)+1):
+	# 	try :
+	# 		# print visited[i]
+	# 		print str(i) +": " + str(pred[i])
+	# 	except KeyError:
+	# 		print str(i) +": Unvisited"
 
 	sdpath=[]
 	v=e2[0]
-	print v
-	print pred[v]
 	print "Collecting path"
-	while pred[v]:
-		v=pred[v]
-		print pred[v],toklist[v-1]
-		sdpath.append(toklist[v-1])
+	try:
+		while pred[v]:
+			v=pred[v]
+			# print v,pred[v],toklist[v-1]
+			sdpath.append(toklist[v-1])
+	except KeyError:#disjoint case
+		return []
 
 	return sdpath[:-1]
 
@@ -98,7 +95,47 @@ def shortestDP(treeList,e1,e2,toklist):
 # print "#####\n" + str(shortestDP(treeList,e1,e2,toklist))
 
 
+def findSDP(rel,mention,mentionDoc,docFilePath):
 
+	mentionFile=open(docFilePath+mention.filename.split('/')[-1])
+	mentionDoc.ParseFromString(mentionFile.read())
+	mentionFile.close()
+	#match rel.sentence in document
+	for sent in mentionDoc.sentences :
+		toklist=[]
+		for token in sent.tokens:
+			toklist.append(token.word)
+		
+		if toklist==mention.sentence.strip().split(" ") :
+
+			treeList=sent.depTree.head
+			#find the entity ranges
+			e1=None
+			e2=None
+			for entMention in sent.mentions :
+			
+				if (mention.sourceId == entMention.id):
+					print "SID ="+ str(mention.sourceId)
+					print "FOUND IT "
+					e1 = (getattr(entMention,"from")+1, entMention.to+1 )
+				elif(mention.destId==entMention.id):
+					print "SID ="+ str(mention.destId)
+					print "FOUND IT "
+					e2 = (getattr(entMention,"from")+1, entMention.to+1 )
+			#find the dependency parse
+			print toklist
+			print e1,e2
+			print mentionFile
+			print inputFile
+			if (len(treeList)==0):
+				print "No Dep Tree"
+				break
+
+			# for i in range (0,len(treeList)):
+			# 	print str(i+1) +"-->" + str(treeList[i])
+			sdp=shortestDP(treeList,e1,e2,toklist)
+			print "The SDP is :"+str(sdp)
+			break
 
 
 
@@ -108,43 +145,19 @@ rel=Document_pb2.Relation()
 mentionDoc=Document_pb2.Document()
 
 ######
-i=100000
-######Loop1 begins
-######CP
-inputFile= open(sample_file_path + str(i) + ".pb","rb")
-rel.ParseFromString(inputFile.read())
-inputFile.close()
+sample_low_count = 100000
+# sample_high_count = 101879
+sample_high_count = 119465
+# sample_high_count= 100100
+badcount=0
+for i in range(sample_low_count,sample_high_count):
+	print "Rel No : "+str(i)
+	inputFile= open(sample_file_path + str(i) + ".pb","rb")
+	rel.ParseFromString(inputFile.read())
+	inputFile.close()
 
-for mention in rel.mention :
-######/CP
-	print 1
-	mentionFile=open(docFilePath+mention.filename.split('/')[-1])
-	mentionDoc.ParseFromString(mentionFile.read())
-	mentionFile.close()
-	#match rel.sentence in document
-	for sent in mentionDoc.sentences :
-		toklist=[]
-		for token in sent.tokens:
-			toklist.append(token.word)
-		print toklist
-		#if matched
-		if toklist==mention.sentence.strip().split(" ") :
-			# print 4
-			root=sent.depTree.root
-			treeList=sent.depTree.head
-			#find the entity ranges
-			for entMention in sent.mentions :
-				# print 5
-				if (mention.sourceId == entMention.id):
-					e1 = (getattr(entMention,"from"), entMention.to )
-				elif(mention.destId==entMention.id):
-					e2 = (getattr(entMention,"from"), entMention.to )
-			#find the dependency parse
-			print e1,e2
-			# for i in range (0,len(treeList)):
-			# 	print str(i+1) +"-->" + str(treeList[i])
-			sdp=shortestDP(treeList,e1,e2,toklist)
-			print sdp
-			break
-	break
+	for mention in rel.mention :
+		print findSDP(rel,mention,mentionDoc,docFilePath)
+	######/CP
+
 
