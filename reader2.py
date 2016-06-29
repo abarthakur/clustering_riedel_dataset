@@ -7,6 +7,7 @@ import os.path
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage, cophenet
 from scipy.spatial.distance import pdist
+from t_sne import tsne_viz
 
 def loadGuidMap(refresh=False):
     pickle_dump_path = "./data/interim/guidMap.p"
@@ -29,9 +30,8 @@ def loadGuidMap(refresh=False):
 
     return guidMap
 
-def loadVectorMap(refresh=False):
+def loadVectorMap(refresh=False, vector_file_path="./data/raw/glove.6B/glove.6B.50d.txt"):
     pickle_dump_path = "./data/interim/vectorMap.p"
-    vector_file_path = "./data/raw/glove.6B/glove.6B.50d.txt"
     if refresh or not os.path.isfile(pickle_dump_path):
         print "Creating new vector map" 
         vecFile= open(vector_file_path,"r")
@@ -126,9 +126,10 @@ def bucket_to_vectors(buckets, vectorMap, refresh=False, remove_duplicate = Fals
 
         # initialize vectors to max length N
         counter = 0
-        entity_1_vectors = np.zeros((N,50), dtype=np.float32)
-        entity_2_vectors = np.zeros((N,50), dtype=np.float32)
-        phrase_vectors = np.zeros((N,50), dtype=np.float32)
+        vector_size = vectorMap.items()[0][1].shape[0]
+        entity_1_vectors = np.zeros((N,vector_size), dtype=np.float32)
+        entity_2_vectors = np.zeros((N,vector_size), dtype=np.float32)
+        phrase_vectors = np.zeros((N,vector_size), dtype=np.float32)
         label_vector = np.zeros(N)
         phrases_list = []
 
@@ -141,8 +142,8 @@ def bucket_to_vectors(buckets, vectorMap, refresh=False, remove_duplicate = Fals
             entity_2 = data[1].split(' ')
            
             # initialize entity vectors to zeros
-            vector_e1 = np.zeros(50, dtype=np.float32)
-            vector_e2 = np.zeros(50, dtype=np.float32)
+            vector_e1 = np.zeros(vector_size, dtype=np.float32)
+            vector_e2 = np.zeros(vector_size, dtype=np.float32)
 
             for word in entity_1:
                 try:
@@ -162,7 +163,7 @@ def bucket_to_vectors(buckets, vectorMap, refresh=False, remove_duplicate = Fals
 
             for phrase in data[3]:
                 # initialize phrase vector to zero
-                vector_phrase = np.zeros(50, dtype=np.float32)
+                vector_phrase = np.zeros(vector_size, dtype=np.float32)
 
                 words = filter(None,phrase.split(' '))
                 for word in words:
@@ -198,7 +199,7 @@ def bucket_to_vectors(buckets, vectorMap, refresh=False, remove_duplicate = Fals
 
 if __name__ == "__main__":
     guidMap=loadGuidMap()
-    vectorMap = loadVectorMap(refresh=False)
+    vectorMap = loadVectorMap(refresh=False, vector_file_path="./data/raw/glove.6B/glove.6B.50d.txt")
     relationMap = loadRelationMap()
     buckets = load_buckets(guidMap, relationMap, refresh=False)
     X_train, y_label, phrases_label = bucket_to_vectors(buckets, vectorMap, refresh=False)
@@ -207,32 +208,47 @@ if __name__ == "__main__":
     # id 2 = /people/person/place_of_birth
     sample_idx = y_label == 2
     X_sample = X_train[sample_idx]
-    phrase_sample = phrases_label[sample_idx]
+    phrases_sample = phrases_label[sample_idx]
+    
+    
+    # remove duplicates
+    #X_sample_red = np.ascontiguousarray(X_sample).view(np.dtype((np.void, X_sample.dtype.itemsize * X_sample.shape[1])))
+    #_, idx = np.unique(X_sample_red, return_index=True)
+    #X_sample = X_sample[idx]
+    #phrases_sample = phrases_sample[idx]
 
+    color_sample = []
+    for phrase in phrases_sample:
+        if 'born' in phrase or 'birth' in phrase or 'native' in phrase:
+            color_sample.append('Red')
+        else:
+            color_sample.append('Black')
+
+    # visualize t-sne plot    
+    tsne_viz(X_sample[:,600:900], rownames=phrases_sample, use_pca=False, learning_rate=200, n_iter=40000,colors=color_sample,output_filename='person_place_of_birth_300_duplicates_lr_1000.pdf', figheight=320, figwidth=400)
+
+    #random_idx = np.random.choice(X_train.shape[0], 100, replace=False)
+    #X_sample = X_train[random_idx]
+    #phrases_sample = phrases_label[random_idx]
 
     # hierarchical clustering sample
     # source https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
 
-    phrase_vectors = X_sample[:,50:100]
-    Z = linkage(phrase_vectors, 'single', metric='cosine')
+    #phrase_vectors = X_sample[:,50:100]
+    #Z = linkage(phrase_vectors, 'single', metric='cosine')
 
-    plt.figure(figsize=(125, 50))
-    plt.title('Hierarchical Clustering Dendrogram')
-    plt.xlabel('phrase')
-    plt.ylabel('distance')
-    dendrogram(Z, 
-            leaf_rotation=90.,  # rotates the x axis labels
-            leaf_font_size=8.,  # font size for the x axis labels
-            labels= phrase_sample
-            )
-    plt.show()
+    #plt.figure(figsize=(125, 50))
+    #plt.title('Hierarchical Clustering Dendrogram')
+    #plt.xlabel('phrase')
+    #plt.ylabel('distance')
+    #dendrogram(Z, 
+    #        leaf_rotation=90.,  # rotates the x axis labels
+    #        leaf_font_size=8.,  # font size for the x axis labels
+    #        labels= phrase_sample
+    #        )
+    #plt.show()
 
     #plt.savefig('phrase_plot.png')    
-    # remove duplicates
-    #X_train_red = np.ascontiguousarray(X_train).view(np.dtype((np.void, X_train.dtype.itemsize * X_train.shape[1])))
-    #_, idx = np.unique(X_train_red, return_index=True)
-    #X_train_red = X_train[idx]
-    #y_label_red = y_label[idx]
 
     #count_list = []
     #for key in buckets.keys():
