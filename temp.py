@@ -1,5 +1,4 @@
 import Document_pb2	
-import reader2
 from collections import deque
 import sys
 reload(sys)
@@ -32,7 +31,6 @@ def shortestDP(treeList,e1,e2,toklist):
 		if (len(adjlist[i])>0 and adjlist[i][0]!=e2[0]):
 			adjlist[e2[0]].extend(adjlist[i])
 
-
 	#make undirected 
 	for key in adjlist :
 		for neighbour in adjlist[key]:
@@ -41,14 +39,14 @@ def shortestDP(treeList,e1,e2,toklist):
 			# print neighbour
 			if key not in adjlist[neighbour]:
 				adjlist[neighbour].append(key)
-	#do bfs
 
+	#do bfs
 	q= deque()
-	q.append(e1[0])
+	q.append(e2[0])
 	visited={}
 	pred = {}
-	pred[e1[0]]=None
-	visited[e1[0]]=True
+	pred[e2[0]]=None
+	visited[e2[0]]=True
 	while True:
 		try:
 			u=q.popleft()
@@ -75,8 +73,8 @@ def shortestDP(treeList,e1,e2,toklist):
 	# 		print str(i) +": Unvisited"
 
 	sdpath=[]
-	v=e2[0]
-	print "Collecting path"
+	v=e1[0]
+	# print "Collecting path"
 	try:
 		while pred[v]:
 			v=pred[v]
@@ -88,18 +86,16 @@ def shortestDP(treeList,e1,e2,toklist):
 	return sdpath[:-1]
 
 
-# treeList = [0,11,2,7,8,8,1,10,2,1,6]
-# toklist = ['A','B','C','D','E','F','G','H','I','J','K']
-# e1=(1,2)
-# e2=(5,6)
-# print "#####\n" + str(shortestDP(treeList,e1,e2,toklist))
-
-
 def findSDP(rel,mention,mentionDoc,docFilePath):
-
+	''' return type : Pair
+		0th index : Boolean indicating success of operation
+		1st index : String of the SDP. Direction is from e1 to e2. Does not include the entities.
+	'''
 	mentionFile=open(docFilePath+mention.filename.split('/')[-1])
 	mentionDoc.ParseFromString(mentionFile.read())
 	mentionFile.close()
+	
+	error_msg=""
 	#match rel.sentence in document
 	for sent in mentionDoc.sentences :
 		toklist=[]
@@ -113,12 +109,12 @@ def findSDP(rel,mention,mentionDoc,docFilePath):
 			e1=None
 			e2=None
 			for entMention in sent.mentions :
-			
-				if (mention.sourceId == entMention.id):
+
+				if (mention.sourceId == entMention.id or rel.sourceGuid == entMention.entityGuid):
 					print "SID ="+ str(mention.sourceId)
 					print "FOUND IT "
 					e1 = (getattr(entMention,"from")+1, entMention.to+1 )
-				elif(mention.destId==entMention.id):
+				elif(mention.destId==entMention.id or rel.destGuid == entMention.entityGuid):
 					print "SID ="+ str(mention.destId)
 					print "FOUND IT "
 					e2 = (getattr(entMention,"from")+1, entMention.to+1 )
@@ -126,38 +122,41 @@ def findSDP(rel,mention,mentionDoc,docFilePath):
 			print toklist
 			print e1,e2
 			print mentionFile
-			print inputFile
+			# print inputFile
 			if (len(treeList)==0):
-				print "No Dep Tree"
+				error_msg="No Dep Tree found"
 				break
 
 			# for i in range (0,len(treeList)):
 			# 	print str(i+1) +"-->" + str(treeList[i])
-			sdp=shortestDP(treeList,e1,e2,toklist)
-			print "The SDP is :"+str(sdp)
-			break
+			if e1 and e2 :
+				return (True," ".join(shortestDP(treeList,e1,e2,toklist)))
+			else:
+				error_msg="Entity mention did not match"
 
+	return (False,error_msg)
 
+if __name__ == "__main__":
+	sample_file_path = "./data/raw/kb_manual/trainPositive/"
+	docFilePath="./data/raw/nyt-2005-2006.backup/"
+	rel=Document_pb2.Relation()
+	mentionDoc=Document_pb2.Document()
 
-sample_file_path = "./data/raw/kb_manual/trainPositive/"
-docFilePath="./data/raw/nyt-2005-2006.backup/"
-rel=Document_pb2.Relation()
-mentionDoc=Document_pb2.Document()
+	######
+	sample_low_count = 100000
+	# sample_high_count = 101879
+	sample_high_count = 119465
+	# sample_high_count= 100100
+	badcount=0
+	for i in range(sample_low_count,sample_high_count):
+		print "Rel No : "+str(i)
+		inputFile= open(sample_file_path + str(i) + ".pb","rb")
+		rel.ParseFromString(inputFile.read())
+		inputFile.close()
 
-######
-sample_low_count = 100000
-# sample_high_count = 101879
-sample_high_count = 119465
-# sample_high_count= 100100
-badcount=0
-for i in range(sample_low_count,sample_high_count):
-	print "Rel No : "+str(i)
-	inputFile= open(sample_file_path + str(i) + ".pb","rb")
-	rel.ParseFromString(inputFile.read())
-	inputFile.close()
-
-	for mention in rel.mention :
-		print findSDP(rel,mention,mentionDoc,docFilePath)
-	######/CP
+		for mention in rel.mention :
+			print inputFile
+			print "SDP is : "+str(findSDP(rel,mention,mentionDoc,docFilePath))
+		######/CP
 
 
