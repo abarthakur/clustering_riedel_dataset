@@ -111,18 +111,10 @@ def findSDP(rel,mention,mentionDoc,docFilePath):
 			for entMention in sent.mentions :
 
 				if (mention.sourceId == entMention.id or rel.sourceGuid == entMention.entityGuid):
-					print "SID ="+ str(mention.sourceId)
-					print "FOUND IT "
 					e1 = (getattr(entMention,"from")+1, entMention.to+1 )
 				elif(mention.destId==entMention.id or rel.destGuid == entMention.entityGuid):
-					print "SID ="+ str(mention.destId)
-					print "FOUND IT "
 					e2 = (getattr(entMention,"from")+1, entMention.to+1 )
 			#find the dependency parse
-			print toklist
-			print e1,e2
-			print mentionFile
-			# print inputFile
 			if (len(treeList)==0):
 				error_msg="No Dep Tree found"
 				break
