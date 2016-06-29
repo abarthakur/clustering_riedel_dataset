@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage, cophenet
 from scipy.spatial.distance import pdist
 from t_sne import tsne_viz
+import shortestdp
 
 def loadGuidMap(refresh=False):
     pickle_dump_path = "./data/interim/guidMap.p"
@@ -69,14 +70,18 @@ def load_buckets(guidMap, relationMap, refresh=False):
     """
     pickle_dump_path = "./data/interim/buckets.p"
     sample_file_path = "./data/raw/kb_manual/trainPositive/"
+    docFilePath="./data/raw/nyt-2005-2006.backup/"
     sample_low_count = 100000
     sample_high_count = 119465
     if refresh or not os.path.isfile(pickle_dump_path):
         print "creating bucket"
         buckets = {}
+        rel=Document_pb2.Relation()
+        mentionDoc=Document_pb2.Document()
+        badcount=0
         for i in range(sample_low_count,sample_high_count):
+            print i
             inputFile= open(sample_file_path + str(i) + ".pb","rb")
-            rel=Document_pb2.Relation()
             rel.ParseFromString(inputFile.read())
             inputFile.close()
             bucket_content = []
@@ -97,8 +102,13 @@ def load_buckets(guidMap, relationMap, refresh=False):
                 print "Relation Key Error"
             bucket_content.append(relation)
             phrases = []
+            sdps=[]
             count = len(rel.mention)
             for mention in rel.mention:
+                (found,sdp)=shortestdp.findSDP(rel,mention,mentionDoc,docFilePath)
+                if not found :
+                    sdp= "sdp-not-found"
+                    badcount+=1
                 phrase1=re.match("(.*)"+entity_1.decode('utf-8')+"(.*)"+entity_2.decode('utf-8')+"(.*)",mention.sentence, re.UNICODE)
                 phrase2=re.match("(.*)"+entity_2.decode('utf-8')+"(.*)"+entity_1.decode('utf-8')+"(.*)",mention.sentence, re.UNICODE)
                 if phrase1:
@@ -112,6 +122,7 @@ def load_buckets(guidMap, relationMap, refresh=False):
             bucket_content.append(phrases)
             bucket_content.append(count)
             buckets[i] = bucket_content
+        print "Instances failed to find sdp : "+ str(badcount)
         pickle.dump(buckets, open(pickle_dump_path, "wb"))
     else:
         print "Using existing bucket"
@@ -203,7 +214,7 @@ if __name__ == "__main__":
     relationMap = loadRelationMap()
     buckets = load_buckets(guidMap, relationMap, refresh=False)
     X_train, y_label, phrases_label = bucket_to_vectors(buckets, vectorMap, refresh=False)
-   
+    
     # extract samples for one particular relation type
     # id 2 = /people/person/place_of_birth
     sample_idx = y_label == 2
