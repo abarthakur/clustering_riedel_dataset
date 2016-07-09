@@ -6,6 +6,7 @@ import Document_pb2
 import pickle
 import SPARQLWrapper
 import re
+from fuzzywuzzy import fuzz
 
 
 def filter_function(x):
@@ -34,29 +35,58 @@ def checkForEntities(sent,idcounter,entityMaps):
                 entMention["from"]=startEntity
                 entMention["to"]=i-1
                 entMention["label"]=oldner
-                entMention["string"]=sent["words"][startEntity-1:i-1]
+                entMention["string"]=" ".join(sent["words"][startEntity-1:i-1])
                 print "New Entity  :  " + str(entMention["string"])
                 # checkEntityFreebase(entMention,sparql)
                 entMention["fbid"]=""
                 entMention["fbname"]=""
-                found=False
-                regex= " ".join(entMention["string"])
-                for key in entityMaps[oldner] :
-                    if re.match(regex,key):
-                        entMention["fbid"]=entityMaps[oldner][key]
-                        entMention["fbname"]=key
-                        print "Freebase entity : "+entMention["fbid"]
-                        found=True
-                        break
+                found=checkEntityInDict(entMention,entityMaps)
                 if not found :
                     allfreebase=False
                 #
                 mentions.append(entMention)
+
+
             if ner in validNers:
                 startEntity=i
         oldner=ner
     sent["mentions"]=mentions
     return allfreebase
+
+def checkEntityInDict(entMention,entityMaps):
+    found=False
+    name=entMention["string"]
+    label=entMention["label"]
+    score=0
+    most_probable=""
+    # threshold=95
+    
+    if name in entityMaps[label]:
+        #should we use casefold or normalize to deal with unicode data?
+        entMention["fbid"]=entityMaps[label][name]
+        entMention["fbname"]=name
+        found=True
+        print "Freebase entity : "+entMention["fbid"],entMention["fbname"]
+        return found
+
+    for key in entityMaps[label] :#search key list
+        if re.match(name,key):
+            score2=fuzz.ratio(key,name)
+            if (score2>score):
+                score=score2
+                most_probable=key
+            # if (score > threshold):
+            #     most_probable=key
+            #     break
+
+    if (score>0):#perfect match not found
+        key=most_probable
+        entMention["fbid"]=entityMaps[label][key]
+        entMention["fbname"]=key                    
+        found=True
+        print "Most probable freebase entity : "+entMention["fbid"],entMention["fbname"]
+    return found
+
 
 def checkEntityFreebase(entMention,sparql):
     '''query of the form -
@@ -67,7 +97,7 @@ def checkEntityFreebase(entMention,sparql):
         } limit 1
     '''
     entMention["fbid"]=None
-    regex= " ".join(entMention["string"])
+    regex= entMention["string"]
     typeDict={"PERSON":":people.person","LOCATION":":location.location","ORGANISATION":":organization.organization"}
     #query freebase and set Guid if any. set to none else.
     query = ('''prefix : <http://rdf.freebase.com/ns/>\n select ?entity ?entityname{
@@ -141,7 +171,7 @@ def write_sentence(sent,sentfile):
     sentfile.write("\t".join(sent["depTree"])+"\n")
     sentfile.write("\t".join(sent["depTreeRels"])+"\n")
     for mention in sent["mentions"]:
-        l=[str(mention["id"]),str(mention["from"]),str(mention["to"]),mention["label"]," ".join(mention["string"]),mention["fbid"],mention["fbname"]]
+        l=[str(mention["id"]),str(mention["from"]),str(mention["to"]),mention["label"],mention["string"],mention["fbid"],mention["fbname"]]
         sentfile.write("\t".join(l)+"\n")
     sentfile.write("#####\n")
 
@@ -166,7 +196,6 @@ def load_sentence(sentfile):
         else:
             mention={}
             [mention["id"],mention["from"],mention["to"],mention["label"],mention["string"],mention["fbid"],mention["fbname"]]=line.split("\t")
-            mention["string"]
             sent["mentions"].append(mention)
     return sent
 
@@ -302,13 +331,13 @@ def load_entity_map(sparql,entNER,refresh=False):
         return pickle.load(open(pickle_dump_path,"rb")) 
 
 
-sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
+# sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
 # validNers=["PERSON","ORGANISATION","LOCATION"]
 # for ner in validNers:
 #     load_entity_map(sparql,ner)
 reload(sys)  
 sys.setdefaultencoding('utf8')
-# warc_to_tsv()
+warc_to_tsv()
 findRelations(open("./data/raw/others_sents.tsv","r"),sparql)
 # f=open("./data/raw/others_sents.tsv","r")
 # print load_sentence(f)
