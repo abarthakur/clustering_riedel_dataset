@@ -89,11 +89,23 @@ def extractFeatures(sent,relTuple):
     #extract features here. Note sdp algo can be reused easily
     return
 
+def findRelations(sentfile,sparql):
+    print "Checking for relations"
+    relations={}
+    while(True):
+        sent=load_sentence(sentfile)
+        if not sent :
+            break
+        checkForRelations(sent,sparql,relations)
+    relPickle=open("./data/raw/relations.p","wb")
+    print "Relations"+str(relations)
+    pickle.dump(relations,relPickle)
+    relPickle.close()
 
 
 def checkForRelations(sent,sparql,relations):
 
-    print "checking for relations"
+    # print "checking for relations"
     for i in range (0,len(sent["mentions"])):
         e1=sent["mentions"][i]
         if not e1["fbid"] :
@@ -135,17 +147,20 @@ def write_sentence(sent,sentfile):
 
 def load_sentence(sentfile):
     sent={}
-
-    sent["id"]=sentfile.readline()[-1]
-    sent["words"]=sentfile.readline()[-1]
-    sent["tags"]=sentfile.readline()[-1]
-    sent["ners"]=sentfile.readline()[-1]
-    sent["depTree"]=sentfile.readline()[-1]
-    sent["depTreeRels"]=sentfile.readline()[-1]
+    check=sentfile.readline()[:-1]
+    if check=="":
+        return None
+    sent["id"]=check
+    # print check
+    sent["words"]=sentfile.readline()[:-1]
+    sent["tags"]=sentfile.readline()[:-1]
+    sent["ners"]=sentfile.readline()[:-1]
+    sent["depTree"]=sentfile.readline()[:-1]
+    sent["depTreeRels"]=sentfile.readline()[:-1]
     sent["mentions"]=[]
     done = False
     while not done :
-        line=sentfile.readline()[-1]
+        line=sentfile.readline()[:-1]
         if line == "#####"  :
             done=True
         else:
@@ -287,10 +302,15 @@ def load_entity_map(sparql,entNER,refresh=False):
         return pickle.load(open(pickle_dump_path,"rb")) 
 
 
-# sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
+sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
 # validNers=["PERSON","ORGANISATION","LOCATION"]
 # for ner in validNers:
 #     load_entity_map(sparql,ner)
 reload(sys)  
 sys.setdefaultencoding('utf8')
-warc_to_tsv()
+# warc_to_tsv()
+findRelations(open("./data/raw/others_sents.tsv","r"),sparql)
+# f=open("./data/raw/others_sents.tsv","r")
+# print load_sentence(f)
+# print f.read()
+# print f.readline()
