@@ -140,7 +140,7 @@ def checkForRelations(sent,sparql,relations):
         e1=sent["mentions"][i]
         if not e1["fbid"] :
             continue
-        for j in range(i+1,len(sent["mentions"])):
+        for j in range(0,len(sent["mentions"])):
             e2=sent["mentions"][j]
             if not e2["fbid"] :
                 continue
