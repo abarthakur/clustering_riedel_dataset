@@ -2,14 +2,13 @@ import gzip
 import sys
 import os
 import csv
-import Document_pb2
 import pickle
 import SPARQLWrapper
 import re
 from fuzzywuzzy import fuzz
 import time
-import sets as pysets
-
+import codecs
+import imp
 
 def filter_function(x):
     if x == '' or '\r' in x:
@@ -38,13 +37,13 @@ def checkForEntities(sent,idcounter,entityMaps,entitySets):
                 entMention["to"]=i-1
                 entMention["label"]=oldner
                 entMention["string"]=" ".join(sent["words"][startEntity-1:i-1])
-                print "New Entity  :  " + str(entMention["string"])
+                print("New Entity  :  " + str(entMention["string"]))
                 # checkEntityFreebase(entMention,sparql)
                 entMention["fbid"]=""
                 entMention["fbname"]=""
                 t1=time.clock()
                 found=checkEntityInDict(entMention,entityMaps,entitySets)
-                print time.clock()-t1
+                print(time.clock()-t1)
                 if not found :
                     allfreebase=False
                 #
@@ -70,10 +69,10 @@ def checkEntityInDict(entMention,entityMaps,entitySets):
         entMention["fbid"]=entityMaps[label][name]
         entMention["fbname"]=name
         found=True
-        print "Freebase entity : "+entMention["fbid"],entMention["fbname"]
+        print("Freebase entity : "+entMention["fbid"],entMention["fbname"])
         return found
     x=name.split(" ")
-    chset=pysets.Set()
+    chset=set()
     for word in x:
         chset.add(word[0])
     for ch in chset:
@@ -93,7 +92,7 @@ def checkEntityInDict(entMention,entityMaps,entitySets):
         entMention["fbid"]=entityMaps[label][key]
         entMention["fbname"]=key                    
         found=True
-        print "Most probable freebase entity : "+entMention["fbid"],entMention["fbname"]
+        print("Most probable freebase entity : "+entMention["fbid"],entMention["fbname"].encode('utf-8'))
     return found
 
 
@@ -119,7 +118,7 @@ def checkEntityFreebase(entMention,sparql):
     sparql.setReturnFormat(SPARQLWrapper.JSON)
     results= sparql.query().convert()
     for result in results["results"]["bindings"]:
-        print result["entity"]["value"],result["entityname"]["value"]
+        print(result["entity"]["value"],result["entityname"]["value"])
         entMention["fbid"]=result["entity"]["value"]
         entMention["fbname"]=result["entityname"]["value"]
 
@@ -129,7 +128,7 @@ def extractFeatures(sent,relTuple):
     return
 
 def findRelations(sentfile,sparql):
-    print "Checking for relations"
+    print("Checking for relations")
     relations={}
     while(True):
         sent=load_sentence(sentfile)
@@ -138,9 +137,9 @@ def findRelations(sentfile,sparql):
         t1=time.clock()
         checkForRelations(sent,sparql,relations)
         t2=time.clock()
-        print t2-t1
+        print(t2-t1)
     relPickle=open("./data/raw/relations.p","wb")
-    print "Relations"+str(relations)
+    print("Relations"+str(relations))
     pickle.dump(relations,relPickle)
     relPickle.close()
 
@@ -158,16 +157,16 @@ def checkForRelations(sent,sparql,relations):
                 continue
             #query for which relations
             query=('''prefix : <http://rdf.freebase.com/ns/>\nselect distinct ?rel {'''
-                    "<"+e1["fbid"]+"> ?rel <"+e2["fbid"]+">\n}")
+                    "<"+e1["fbid"].decode('utf-8') +"> ?rel <"+e2["fbid"].decode('utf-8')+">\n}")
             sparql.setQuery(query)
             sparql.setReturnFormat(SPARQLWrapper.JSON)
             results= sparql.query().convert()
 
             for result in results["results"]["bindings"]:
-                print result["rel"]["value"]
+                print(result["rel"]["value"])
                 rel= result["rel"]["value"]
                 relTuple=(e1["fbid"],rel,e2["fbid"])
-                sentence=" ".join(sent["words"])
+                sentence=sent["words"]
                 features=extractFeatures(sent,relTuple)
                 relMention={"sourceId":e1["id"],"destId":e2["id"],"sentid":sent["id"],"sentence":sentence,"features":features}
                 if relTuple not in relations:
@@ -176,21 +175,22 @@ def checkForRelations(sent,sparql,relations):
     return
 
 def write_sentence(sent,sentfile):
-    sentfile.write(sent["id"]+"\n")
-    sentfile.write("\t".join(sent["words"])+"\n")
-    sentfile.write("\t".join(sent["tags"])+"\n")
-    sentfile.write("\t".join(sent["ners"])+"\n")
-    sentfile.write("\t".join(sent["depTree"])+"\n")
-    sentfile.write("\t".join(sent["depTreeRels"])+"\n")
+    sentfile.write(bytes(sent["id"] + "\n", 'utf-8'))
+    sentfile.write(bytes("\t".join(sent["words"])+"\n", 'utf-8'))
+    sentfile.write(bytes("\t".join(sent["tags"])+"\n", 'utf-8'))
+    sentfile.write(bytes("\t".join(sent["ners"])+"\n", 'utf-8'))
+    sentfile.write(bytes("\t".join(sent["depTree"])+"\n", 'utf-8'))
+    sentfile.write(bytes("\t".join(sent["depTreeRels"])+"\n", 'utf-8'))
     for mention in sent["mentions"]:
         l=[str(mention["id"]),str(mention["from"]),str(mention["to"]),mention["label"],mention["string"],mention["fbid"],mention["fbname"]]
-        sentfile.write("\t".join(l)+"\n")
-    sentfile.write("#####\n")
+        to_write = "\t".join(l) + "\n"
+        sentfile.write(to_write.encode('utf-8'))
+    sentfile.write(b"#####\n")
 
 def load_sentence(sentfile):
     sent={}
     check=sentfile.readline()[:-1]
-    if check=="":
+    if check == b'':
         return None
     sent["id"]=check
     # print check
@@ -203,11 +203,11 @@ def load_sentence(sentfile):
     done = False
     while not done :
         line=sentfile.readline()[:-1]
-        if line == "#####"  :
+        if line == b'#####'  :
             done=True
         else:
             mention={}
-            [mention["id"],mention["from"],mention["to"],mention["label"],mention["string"],mention["fbid"],mention["fbname"]]=line.split("\t")
+            [mention["id"],mention["from"],mention["to"],mention["label"],mention["string"],mention["fbid"],mention["fbname"]]=line.split(b'\t')
             sent["mentions"].append(mention)
     return sent
 
@@ -240,8 +240,8 @@ def warc_to_tsv():
     entitySets=load_key_lists(entityMaps)
     warc_file_directory     = "./data/raw/wiki_teaser/"
     pickle_directory      = "./data/raw/pickle_full/"
-    freebase_file=open("./data/raw/allfreebase_sents.tsv","w")
-    others_file=open("./data/raw/others_sents.tsv","w")
+    freebase_file=open("./data/raw/allfreebase_sents.tsv","wb")
+    others_file=open("./data/raw/others_sents.tsv","wb")
     docCount=0
     sentCount=0
     idcounter=0
@@ -250,7 +250,7 @@ def warc_to_tsv():
     others_sentences=[]
     for file_name in os.listdir(warc_file_directory):
         f = gzip.open(warc_file_directory + file_name, 'rb')
-        data = filter(filter_function, f.read().decode('utf8').split('\n'))
+        data = list(filter(filter_function, f.read().decode('utf8').split('\n')))
         starting=True
         for line in data :
             '''Each line is of the form - 
@@ -311,14 +311,14 @@ def load_entity_map(sparql,entNER,refresh=False):
     files={"PERSON":"persons","ORGANISATION":"organisations","LOCATION":"locations"}
     pickle_dump_path=filePath+files[entNER]+".p"    
     if refresh or not os.path.isfile(pickle_dump_path):
-        print "Creating new entity map" 
+        print("Creating new entity map") 
         i=0
         stop=False
         typeDict={"PERSON":":people.person","LOCATION":":location.location","ORGANISATION":":organization.organization"}
         pickleFile=open(pickle_dump_path,"wb")
-        outFile=open(filePath+files[entNER]+".tsv","w")
+        outFile=open(filePath+files[entNER]+".tsv","wb")
         while(not stop):
-            print i
+            print(i)
             query = ('''prefix : <http://rdf.freebase.com/ns/>
                  select ?entity ?entityname{
                             ?entity :type.object.name ?entityname .
@@ -328,11 +328,11 @@ def load_entity_map(sparql,entNER,refresh=False):
             sparql.setQuery(query)  
             sparql.setReturnFormat(SPARQLWrapper.JSON)
             results= sparql.query().convert()
-            print "result size : ",len(results["results"]["bindings"])
+            print("result size : ",len(results["results"]["bindings"]))
             if (len(results["results"]["bindings"])<10000):
                 stop=True
             for result in results["results"]["bindings"]:
-                print result["entity"]["value"],result["entityname"]["value"]
+                print(result["entity"]["value"].encode('utf-8'),result["entityname"]["value"].encode('utf-8'))
                 entityMap[result["entityname"]["value"]]=result["entity"]["value"]
                 outFile.write((result["entityname"]["value"]+"\t"+result["entity"]["value"]+"\n").encode("utf-8"))
         pickle.dump(entityMap,pickleFile)
@@ -340,38 +340,40 @@ def load_entity_map(sparql,entNER,refresh=False):
         outFile.close()
         return entityMap
     else:
-        print "Using existing entity map"
+        print("Using existing entity map")
         return pickle.load(open(pickle_dump_path,"rb")) 
 
 def load_key_lists(entityMaps):
-    print "in"
+    print("in")
     t1=time.clock()
     entitySets={}
     for ner in entityMaps:
-        keylist=entityMaps[ner].keys()
+        keylist=list(entityMaps[ner].keys())
         alphabetsets={}
         for key in keylist:
             if key[0] not in alphabetsets:
-                alphabetsets[key[0]]=pysets.Set()
+                alphabetsets[key[0]]=set()
             alphabetsets[key[0]].add(key)
         entitySets[ner]=alphabetsets
     t2=time.clock()
-    print t2-t1
+    print(t2-t1)
     return entitySets
 
 
 
-# sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
+sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
 # validNers=["PERSON","ORGANISATION","LOCATION"]
 # entityMaps={}
 # for ner in validNers:
 #     entityMaps[ner]=load_entity_map(sparql,ner)
-# reload(sys)  
-# sys.setdefaultencoding('utf8')
+#imp.reload(sys)  
 # print load_key_lists(entityMaps)
-
-warc_to_tsv()
-# findRelations(open("./data/raw/others_sents.tsv","r"),sparql)
+#UTF8Writer = codecs.getwriter('utf8')
+#sys.stdout = UTF8Writer(sys.stdout)
+t0 = time.time()
+#warc_to_tsv()
+r = findRelations(open("./data/raw/allfreebase_sents.tsv","rb"),sparql)
+print(time.time() - t0)
 # f=open("./data/raw/others_sents.tsv","r")
 # print load_sentence(f)
 # print f.read()
