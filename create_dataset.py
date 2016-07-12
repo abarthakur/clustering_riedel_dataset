@@ -7,6 +7,8 @@ import pickle
 import SPARQLWrapper
 import re
 from fuzzywuzzy import fuzz
+import time
+import sets as pysets
 
 
 def filter_function(x):
@@ -15,8 +17,8 @@ def filter_function(x):
     else:
         return True
 
-def checkForEntities(sent,idcounter,entityMaps):
-    print "checking for entities"
+def checkForEntities(sent,idcounter,entityMaps,entitySets):
+    # print "checking for entities"
     oldner=""
     validNers=["PERSON","ORGANISATION","LOCATION"]
     mentions=[]
@@ -40,7 +42,9 @@ def checkForEntities(sent,idcounter,entityMaps):
                 # checkEntityFreebase(entMention,sparql)
                 entMention["fbid"]=""
                 entMention["fbname"]=""
-                found=checkEntityInDict(entMention,entityMaps)
+                t1=time.clock()
+                found=checkEntityInDict(entMention,entityMaps,entitySets)
+                print time.clock()-t1
                 if not found :
                     allfreebase=False
                 #
@@ -53,7 +57,7 @@ def checkForEntities(sent,idcounter,entityMaps):
     sent["mentions"]=mentions
     return allfreebase
 
-def checkEntityInDict(entMention,entityMaps):
+def checkEntityInDict(entMention,entityMaps,entitySets):
     found=False
     name=entMention["string"]
     label=entMention["label"]
@@ -68,16 +72,21 @@ def checkEntityInDict(entMention,entityMaps):
         found=True
         print "Freebase entity : "+entMention["fbid"],entMention["fbname"]
         return found
-
-    for key in entityMaps[label] :#search key list
-        if re.match(name,key):
-            score2=fuzz.ratio(key,name)
-            if (score2>score):
-                score=score2
-                most_probable=key
-            # if (score > threshold):
-            #     most_probable=key
-            #     break
+    x=name.split(" ")
+    chset=pysets.Set()
+    for word in x:
+        chset.add(word[0])
+    for ch in chset:
+        if ch in entitySets[label]:
+            for key in entitySets[label][ch] :#search key list
+                if re.match(name,key):
+                    score2=fuzz.ratio(key,name)
+                    if (score2>score):
+                        score=score2
+                        most_probable=key
+                    # if (score > threshold):
+                    #     most_probable=key
+                    #     break
 
     if (score>0):#perfect match not found
         key=most_probable
@@ -126,7 +135,10 @@ def findRelations(sentfile,sparql):
         sent=load_sentence(sentfile)
         if not sent :
             break
+        t1=time.clock()
         checkForRelations(sent,sparql,relations)
+        t2=time.clock()
+        print t2-t1
     relPickle=open("./data/raw/relations.p","wb")
     print "Relations"+str(relations)
     pickle.dump(relations,relPickle)
@@ -225,6 +237,7 @@ def warc_to_tsv():
     entityMaps={}
     for ner in validNers:
         entityMaps[ner]=load_entity_map(sparql,ner)
+    entitySets=load_key_lists(entityMaps)
     warc_file_directory     = "./data/raw/wiki_teaser/"
     pickle_directory      = "./data/raw/pickle_full/"
     freebase_file=open("./data/raw/allfreebase_sents.tsv","w")
@@ -247,7 +260,7 @@ def warc_to_tsv():
             if columns[0]=="1":
                 if not starting:
 
-                    allfreebase=checkForEntities(sent,idcounter,entityMaps)
+                    allfreebase=checkForEntities(sent,idcounter,entityMaps,entitySets)
                     if not allfreebase:
                         only_fb_sentences.append(sent)
                         write_sentence(sent,freebase_file)
@@ -330,15 +343,35 @@ def load_entity_map(sparql,entNER,refresh=False):
         print "Using existing entity map"
         return pickle.load(open(pickle_dump_path,"rb")) 
 
+def load_key_lists(entityMaps):
+    print "in"
+    t1=time.clock()
+    entitySets={}
+    for ner in entityMaps:
+        keylist=entityMaps[ner].keys()
+        alphabetsets={}
+        for key in keylist:
+            if key[0] not in alphabetsets:
+                alphabetsets[key[0]]=pysets.Set()
+            alphabetsets[key[0]].add(key)
+        entitySets[ner]=alphabetsets
+    t2=time.clock()
+    print t2-t1
+    return entitySets
+
+
 
 # sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
 # validNers=["PERSON","ORGANISATION","LOCATION"]
+# entityMaps={}
 # for ner in validNers:
-#     load_entity_map(sparql,ner)
-reload(sys)  
-sys.setdefaultencoding('utf8')
+#     entityMaps[ner]=load_entity_map(sparql,ner)
+# reload(sys)  
+# sys.setdefaultencoding('utf8')
+# print load_key_lists(entityMaps)
+
 warc_to_tsv()
-findRelations(open("./data/raw/others_sents.tsv","r"),sparql)
+# findRelations(open("./data/raw/others_sents.tsv","r"),sparql)
 # f=open("./data/raw/others_sents.tsv","r")
 # print load_sentence(f)
 # print f.read()
