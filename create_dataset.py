@@ -320,7 +320,7 @@ def load_entity_map(sparql,entNER,refresh=False):
         while(not stop):
             print(i)
             query = ('''prefix : <http://rdf.freebase.com/ns/>
-                 select ?entity ?entityname{
+                 select distinct ?entity ?entityname{
                             ?entity :type.object.name ?entityname .
                             ?entity a '''+typeDict[entNER]+"\n"
                 "} limit 10000 offset " +str(i))
@@ -333,8 +333,9 @@ def load_entity_map(sparql,entNER,refresh=False):
                 stop=True
             for result in results["results"]["bindings"]:
                 print(result["entity"]["value"].encode('utf-8'),result["entityname"]["value"].encode('utf-8'))
-                entityMap[result["entityname"]["value"]]=result["entity"]["value"]
-                outFile.write((result["entityname"]["value"]+"\t"+result["entity"]["value"]+"\n").encode("utf-8"))
+                if result["entityname"]["value"] not in entityMap:
+                    entityMap[result["entityname"]["value"]]=result["entity"]["value"]
+                    outFile.write((result["entityname"]["value"]+"\t"+result["entity"]["value"]+"\n").encode("utf-8"))
         pickle.dump(entityMap,pickleFile)
         pickleFile.close()
         outFile.close()
@@ -362,18 +363,18 @@ def load_key_lists(entityMaps):
 
 
 sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
-# validNers=["PERSON","ORGANISATION","LOCATION"]
-# entityMaps={}
-# for ner in validNers:
-#     entityMaps[ner]=load_entity_map(sparql,ner)
+validNers=["PERSON","ORGANISATION","LOCATION"]
+entityMaps={}
+for ner in validNers:
+    entityMaps[ner]=load_entity_map(sparql,ner,True)
 #imp.reload(sys)  
 # print load_key_lists(entityMaps)
 #UTF8Writer = codecs.getwriter('utf8')
 #sys.stdout = UTF8Writer(sys.stdout)
-t0 = time.time()
-#warc_to_tsv()
-r = findRelations(open("./data/raw/allfreebase_sents.tsv","rb"),sparql)
-print(time.time() - t0)
+# t0 = time.time()
+# #warc_to_tsv()
+# r = findRelations(open("./data/raw/allfreebase_sents.tsv","rb"),sparql)
+# print(time.time() - t0)
 # f=open("./data/raw/others_sents.tsv","r")
 # print load_sentence(f)
 # print f.read()
