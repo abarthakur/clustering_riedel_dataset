@@ -24,7 +24,7 @@ def checkForEntities(sent,idcounter,entityMaps,entitySets):
     i=0
     startEntity=1
     oldner="O"
-    allfreebase=True
+    freebase_count=0
     for ner in sent["ners"]:
         i+=1
         if (oldner!=ner):
@@ -44,8 +44,8 @@ def checkForEntities(sent,idcounter,entityMaps,entitySets):
                 t1=time.clock()
                 found=checkEntityInDict(entMention,entityMaps,entitySets)
                 print(time.clock()-t1)
-                if not found :
-                    allfreebase=False
+                if found :
+                    freebase_count+=1
                 #
                 mentions.append(entMention)
 
@@ -54,7 +54,7 @@ def checkForEntities(sent,idcounter,entityMaps,entitySets):
                 startEntity=i
         oldner=ner
     sent["mentions"]=mentions
-    return allfreebase
+    return freebase_count
 
 def checkEntityInDict(entMention,entityMaps,entitySets):
     found=False
@@ -242,11 +242,13 @@ def warc_to_tsv():
     pickle_directory      = "./data/raw/pickle_full/"
     freebase_file=open("./data/raw/allfreebase_sents.tsv","wb")
     others_file=open("./data/raw/others_sents.tsv","wb")
+    useless_file=open("./data/raw/useless_sents.tsv","wb")
     docCount=0
     sentCount=0
     idcounter=0
     # relations={}
     only_fb_sentences=[]
+    useless_sentences=[]
     others_sentences=[]
     for file_name in os.listdir(warc_file_directory):
         f = gzip.open(warc_file_directory + file_name, 'rb')
@@ -260,8 +262,11 @@ def warc_to_tsv():
             if columns[0]=="1":
                 if not starting:
 
-                    allfreebase=checkForEntities(sent,idcounter,entityMaps,entitySets)
-                    if not allfreebase:
+                    freebase_count=checkForEntities(sent,idcounter,entityMaps,entitySets)
+                    if freebase_count<2:
+                        useless_sentences.append(sent)
+                        write_sentence(sent,useless_file)
+                    elif freebase_count==len(sent["mentions"]):
                         only_fb_sentences.append(sent)
                         write_sentence(sent,freebase_file)
                     else:
@@ -362,17 +367,17 @@ def load_key_lists(entityMaps):
 
 
 
-sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
-validNers=["PERSON","ORGANISATION","LOCATION"]
-entityMaps={}
-for ner in validNers:
-    entityMaps[ner]=load_entity_map(sparql,ner,True)
+# sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
+# validNers=["PERSON","ORGANISATION","LOCATION"]
+# entityMaps={}
+# for ner in validNers:
+#     entityMaps[ner]=load_entity_map(sparql,ner,True)
 #imp.reload(sys)  
 # print load_key_lists(entityMaps)
 #UTF8Writer = codecs.getwriter('utf8')
 #sys.stdout = UTF8Writer(sys.stdout)
 # t0 = time.time()
-# #warc_to_tsv()
+warc_to_tsv()
 # r = findRelations(open("./data/raw/allfreebase_sents.tsv","rb"),sparql)
 # print(time.time() - t0)
 # f=open("./data/raw/others_sents.tsv","r")
