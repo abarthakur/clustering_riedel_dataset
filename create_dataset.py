@@ -21,7 +21,7 @@ def load_relation_maps(sparql,NER1,NER2,refresh=False):
         stop=False
         typeDict={"PERSON":":people.person","LOCATION":":location.location","ORGANISATION":":organization.organization"}
         pickleFile=open(pickle_dump_path,"wb")
-        outFile=open(pickle_dump_path[-1]+".tsv","wb")
+        outFile=open(pickle_dump_path[:-2]+".tsv","wb")
         limit=200
         while(not stop):
             print(i)
