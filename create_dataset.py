@@ -9,6 +9,7 @@ from fuzzywuzzy import fuzz
 import time
 import codecs
 import imp
+from SPARQLWrapper.SPARQLExceptions import EndPointInternalError as SPARQLError
 
 def load_relation_maps(sparql,NER1,NER2,refresh=False):
     rel_set=set()
@@ -23,7 +24,7 @@ def load_relation_maps(sparql,NER1,NER2,refresh=False):
         pickleFile=open(pickle_dump_path,"wb")
         outFile=open(pickle_dump_path[-1]+".tsv","wb")
         limit=200
-        while(not stop):
+        while(not stop and limit >0):
             print(i)
             query = ('''prefix : <http://rdf.freebase.com/ns/>
                  select distinct ?rel {
@@ -31,10 +32,17 @@ def load_relation_maps(sparql,NER1,NER2,refresh=False):
                             ?e1 a '''+typeDict[NER1]+" .\n"
                             "?e2 a "+typeDict[NER2]+" \n"
                 "} limit "+str(limit)+" offset " +str(i))
-            i+=limit
+            
             sparql.setQuery(query)  
             sparql.setReturnFormat(SPARQLWrapper.JSON)
-            results= sparql.query().convert()
+            
+            try :
+                results= sparql.query().convert()
+            except SPARQLError as err :
+                limit=limit//2
+                continue
+            
+            i+=limit    
             print("result size : ",len(results["results"]["bindings"]))
             if (len(results["results"]["bindings"])<limit):
                 stop=True
@@ -373,35 +381,27 @@ def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,
 
     print("Finished processing all files")
 
-# if __name__ == "__main__":
-#     output_file_directory=sys.argv[2]
-#     warc_to_tsv(sys.argv[1],output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
-sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
-# sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
-# validNers=["PERSON","ORGANISATION","LOCATION"]
-# entityMaps={}
-# for ner in validNers:
-#     entityMaps[ner]=load_entity_map(sparql,ner,True)
-#imp.reload(sys)  
-# print load_key_lists(entityMaps)
-#UTF8Writer = codecs.getwriter('utf8')
-#sys.stdout = UTF8Writer(sys.stdout)
-# t0 = time.time()
-# warc_to_tsv()
-# rel={}
-# findRelations(rel,"./data/raw/output/task_1.warc.gz.freebase.tsv",sparql)
-# print rel
-# print(time.time() - t0)
-# f=open("./data/raw/others_sents.tsv","r")
-# print load_sentence(f)
-# print f.read()
-# print f.readline()
-# relPickle=open(,"wb")
-# sentfile_path.split("/")[-1][-3]+".relations.p"
-# print("Relations"+str(relations))
-# pickle.dump(relations,relPickle)
-# relPickle.close()
-x=["PERSON","LOCATION","ORGANISATION"]
-for e1 in x:
-    for e2 in x:
-        load_relation_maps(sparql,e1,e2,True)
+if __name__ == "__main__":
+    
+    # sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
+    sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
+    load_entity_map(sparql,"PERSON",True)
+    
+    #UTF8Writer = codecs.getwriter('utf8')
+    #sys.stdout = UTF8Writer(sys.stdout)
+    ''' Usage : python create_dataset.py warc_file_directory output_file_directory begin_index end_index
+        (Give directory paths with trailing /)'''
+    # output_file_directory=sys.argv[2]
+    # warc_to_tsv(sys.argv[1],output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
+
+    # rel={}
+    # findRelations(rel,"./data/raw/output/task_1.warc.gz.freebase.tsv",sparql)
+
+    #--uncomment below lines to load relation maps
+    # x=["PERSON","LOCATION","ORGANISATION"]
+    # for e1 in x:
+    #     for e2 in x:
+    #         load_relation_maps(sparql,e1,e2,True)
+
+
+
