@@ -324,9 +324,9 @@ def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,
         all_fb_sentences=[]
         useless_sentences=[]
         others_sentences=[]
-        all_fb_file=open(output_file_directory+file_name+".freebase.tsv","w")
-        useless_file=open(output_file_directory+file_name+".useless.tsv","w")
-        others_file=open(output_file_directory+file_name+".others.tsv","w")
+        all_fb_file=open(output_file_directory+file_name+".freebase.tsv","wb")
+        useless_file=open(output_file_directory+file_name+".useless.tsv","wb")
+        others_file=open(output_file_directory+file_name+".others.tsv","wb")
 
         f = gzip.open(warc_file_directory + file_name, 'rb')           
         data = list(filter(filter_function, f.read().decode('utf8').split('\n')))
@@ -376,7 +376,7 @@ def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,
         useless_pickle=open(output_file_directory+file_name+".useless.p","wb")
         others_pickle=open(output_file_directory+file_name+".others.p","wb")
         pickle.dump(all_fb_sentences,all_fb_pickle)
-        pickle.dump(useless_fb_sentences,useless_pickle)  
+        pickle.dump(useless_sentences,useless_pickle)  
         pickle.dump(others_sentences,others_pickle)  
 
     print("Finished processing all files")
@@ -385,14 +385,14 @@ if __name__ == "__main__":
     
     # sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.116.93:8890/sparql/")
     sparql = SPARQLWrapper.SPARQLWrapper("http://172.16.24.160:8890/sparql/")
-    load_entity_map(sparql,"PERSON",True)
+    # load_entity_map(sparql,"PERSON",True)
     
     #UTF8Writer = codecs.getwriter('utf8')
     #sys.stdout = UTF8Writer(sys.stdout)
     ''' Usage : python create_dataset.py warc_file_directory output_file_directory begin_index end_index
         (Give directory paths with trailing /)'''
-    # output_file_directory=sys.argv[2]
-    # warc_to_tsv(sys.argv[1],output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
+    output_file_directory=sys.argv[2]
+    warc_to_tsv(sys.argv[1],output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
 
     # rel={}
     # findRelations(rel,"./data/raw/output/task_1.warc.gz.freebase.tsv",sparql)
