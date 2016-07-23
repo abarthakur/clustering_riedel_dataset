@@ -249,25 +249,29 @@ def checkEntityInDict(entMention,entityMaps,entitySets):
         found=True
         print("Freebase entity : "+entMention["fbid"],entMention["fbname"])
         return found
-    x=name.split(" ")
-    chset=set()
-    for word in x:
-        chset.add(word[0])
-    for ch in chset:
-        if ch in entitySets[label]:
-            for key in entitySets[label][ch] :#search key list
-                if re.match(name,key):
-                    score2=fuzz.ratio(key,name)
-                    if (score2>score):
-                        score=score2
-                        most_probable=key
 
-    if (score>0):#perfect match not found
-        key=most_probable
-        entMention["fbid"]=entityMaps[label][key]
-        entMention["fbname"]=key                    
-        found=True
-        print("Most probable freebase entity : "+entMention["fbid"],entMention["fbname"].encode('utf-8'))
+    #Original fuzzy matching code
+    # x=name.split(" ")
+    # chset=set()
+    # for word in x:
+    #     chset.add(word[0])
+    # for ch in chset:
+    #     if ch in entitySets[label]:
+    #         for key in entitySets[label][ch] :#search key list
+    #             if re.match(name,key):
+    #                 score2=fuzz.ratio(key,name)
+    #                 if (score2>score):
+    #                     score=score2
+    #                     most_probable=key
+
+    # if (score>0):#perfect match not found
+    #     key=most_probable
+    #     entMention["fbid"]=entityMaps[label][key]
+    #     entMention["fbname"]=key                    
+    #     found=True
+    #     print("Most probable freebase entity : "+entMention["fbid"],entMention["fbname"].encode('utf-8'))
+
+
     return found
 
 def write_sentence(sent,sentfile):
@@ -308,14 +312,21 @@ def load_sentence(sentfile):
     return sent
 
 def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,sparql):
+    print("Processing files "+str(start_index)+" - "+str(end_index)+" in "+warc_file_directory+" to "+output_file_directory)
     validNers=["PERSON","ORGANISATION","LOCATION"]
     entityMaps={}
     for ner in validNers:
         entityMaps[ner]=load_entity_map(sparql,ner)
-    entitySets=load_key_lists(entityMaps)
     
+    entitySets=None
+    #Uncomment below if using fuzzy matching
+    # entitySets=load_key_lists(entityMaps)
     sentCount=0
     warc_files=os.listdir(warc_file_directory)
+    if start_index < 0 :
+        start_index=0
+    if end_index > len(warc_files) :
+        end_index=len(warc_files)
     for i in range(start_index,end_index):
         if i > len(warc_files):
             break
@@ -324,13 +335,14 @@ def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,
         all_fb_sentences=[]
         useless_sentences=[]
         others_sentences=[]
+
+        with gzip.open(warc_file_directory + file_name, 'rb') as f:
+            data = list(filter(filter_function, f.read().decode('utf8').split('\n')))
+            f.close()
+
         all_fb_file=open(output_file_directory+file_name+".freebase.tsv","wb")
         useless_file=open(output_file_directory+file_name+".useless.tsv","wb")
         others_file=open(output_file_directory+file_name+".others.tsv","wb")
-
-        f = gzip.open(warc_file_directory + file_name, 'rb')           
-        data = list(filter(filter_function, f.read().decode('utf8').split('\n')))
-        f.close()
 
         starting=True
         for line in data :
@@ -372,12 +384,12 @@ def warc_to_tsv(warc_file_directory,output_file_directory,start_index,end_index,
         all_fb_file.close()
         useless_file.close()
         others_file.close()
-        all_fb_pickle=open(output_file_directory+file_name+".freebase.p","wb")
-        useless_pickle=open(output_file_directory+file_name+".useless.p","wb")
-        others_pickle=open(output_file_directory+file_name+".others.p","wb")
-        pickle.dump(all_fb_sentences,all_fb_pickle)
-        pickle.dump(useless_sentences,useless_pickle)  
-        pickle.dump(others_sentences,others_pickle)  
+        with open(output_file_directory+file_name+".freebase.p","wb") as all_fb_pickle:
+            pickle.dump(all_fb_sentences,all_fb_pickle)
+        with open(output_file_directory+file_name+".useless.p","wb") as useless_pickle:
+            pickle.dump(useless_sentences,useless_pickle)      
+        with open(output_file_directory+file_name+".others.p","wb") as others_pickle:
+            pickle.dump(others_sentences,others_pickle)             
 
     print("Finished processing all files")
 
@@ -389,10 +401,16 @@ if __name__ == "__main__":
     
     #UTF8Writer = codecs.getwriter('utf8')
     #sys.stdout = UTF8Writer(sys.stdout)
-    ''' Usage : python create_dataset.py warc_file_directory output_file_directory begin_index end_index
+    ''' Usage : python create_dataset.py warc_file_directory output_file_directory start_index end_index
         (Give directory paths with trailing /)'''
     output_file_directory=sys.argv[2]
-    warc_to_tsv(sys.argv[1],output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
+    warc_file_directory = sys.argv[1]
+    if not output_file_directory.endswith("/"):
+       output_file_directory=output_file_directory+"/"
+    if not warc_file_directory.endswith("/"):
+       warc_file_directory=warc_file_directory+"/"
+
+    warc_to_tsv(warc_file_directory,output_file_directory+"sentences/",int(sys.argv[3]),int(sys.argv[4]),sparql)
 
     # rel={}
     # findRelations(rel,"./data/raw/output/task_1.warc.gz.freebase.tsv",sparql)
