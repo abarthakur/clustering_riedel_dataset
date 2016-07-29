@@ -7,8 +7,9 @@ import java.io.PrintStream;
 class RelationReader {
 
   public static void main(String[] args) throws Exception {
-  	String filePath = "./data/raw/kb_manual/trainPositive.pb";
-  	String destPath= "./data/raw/kb_manual/trainPositive/";
+
+  	String filePath = args[0]; 
+  	String destPath= args[1];
   	FileInputStream input = new FileInputStream(filePath);
   	int i = 100000;
     FileOutputStream output;
