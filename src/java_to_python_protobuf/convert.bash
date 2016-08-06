@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 convert () {
   FILE=$1
   OUT=${FILE::-3}"/"

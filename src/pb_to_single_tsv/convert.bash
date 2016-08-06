@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 convert () {
   python pb_to_tsv.py $1 $2
 }
