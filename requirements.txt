@@ -1,5 +1,0 @@
-click
-Sphinx
-coverage
-flake8
-python-dotenv
