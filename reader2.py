@@ -245,21 +245,21 @@ if __name__ == "__main__":
     # hierarchical clustering sample
     # source https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
 
-    #phrase_vectors = X_sample[:,50:100]
-    #Z = linkage(phrase_vectors, 'single', metric='cosine')
+    phrase_vectors = X_sample[:,50:100]
+    Z = linkage(phrase_vectors, 'single', metric='cosine')
 
-    #plt.figure(figsize=(125, 50))
-    #plt.title('Hierarchical Clustering Dendrogram')
-    #plt.xlabel('phrase')
-    #plt.ylabel('distance')
-    #dendrogram(Z, 
-    #        leaf_rotation=90.,  # rotates the x axis labels
-    #        leaf_font_size=8.,  # font size for the x axis labels
-    #        labels= phrase_sample
-    #        )
-    #plt.show()
+    plt.figure(figsize=(125, 50))
+    plt.title('Hierarchical Clustering Dendrogram')
+    plt.xlabel('phrase')
+    plt.ylabel('distance')
+    dendrogram(Z, 
+           leaf_rotation=90.,  # rotates the x axis labels
+           leaf_font_size=8.,  # font size for the x axis labels
+           labels= phrase_sample
+           )
+    plt.show()
 
-    #plt.savefig('phrase_plot.png')    
+    plt.savefig('phrase_plot.png')    
 
     #count_list = []
     #for key in buckets.keys():
