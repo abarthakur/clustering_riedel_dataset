@@ -4,8 +4,11 @@ This project processes the Riedel dataset introduced in [Riedel et al.(2010)](ht
 
 
 ## Datasets required
-glove word vectors : Place or symbolic link glove.6B directory in data/external/
-riedel dataset : Place or symbolic link riedel_ecml directory in data/external/ (extract all zipped files into riedel_ecml) 
+
+1. glove word vectors : Place or symbolic link glove.6B directory in data/external/
+2. riedel dataset : Place or symbolic link riedel_ecml directory in data/external/ (extract all zipped files into riedel_ecml) 
+
+##  Code
 
 The Riedel dataset is present in protobuf format. All relations are dumped into a single file, separated by a delimiter. Unfortunately, protobuf's python API does not support reading from delimited files. Hence, protobuf's java API is first used to separate the relations. Then the relations are converted into TSV format, from protobuf format. Both conversions can be done by running -
 
