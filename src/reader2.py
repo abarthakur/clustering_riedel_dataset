@@ -12,7 +12,7 @@ import shortestdp
 
 def loadGuidMap(refresh=False):
     pickle_dump_path = "../data/interim/guidMap.p"
-    guid_file_path = "../data/raw/filtered-freebase-simple-topic-dump-3cols.tsv"
+    guid_file_path = "../data/external/filtered-freebase-simple-topic-dump-3cols.tsv"
     if refresh or not os.path.isfile(pickle_dump_path):
         print "Creating new guid map pickle dump"
         guidFile=open(guid_file_path,"r")
@@ -31,7 +31,7 @@ def loadGuidMap(refresh=False):
 
     return guidMap
 
-def loadVectorMap(refresh=False, vector_file_path="../data/raw/glove.6B/glove.6B.50d.txt"):
+def loadVectorMap(refresh=False, vector_file_path="../data/external/glove.6B/glove.6B.50d.txt"):
     pickle_dump_path = "./data/interim/vectorMap.p"
     if refresh or not os.path.isfile(pickle_dump_path):
         print "Creating new vector map" 
@@ -69,8 +69,8 @@ def load_buckets(guidMap, relationMap, refresh=False):
             4th index : sentence count
     """
     pickle_dump_path = "../data/interim/buckets.p"
-    sample_file_path = "../data/raw/kb_manual/trainPositive/"
-    docFilePath="../data/raw/nyt-2005-2006.backup/"
+    sample_file_path = "../data/external/kb_manual/trainPositive/"
+    docFilePath="../data/external/nyt-2005-2006.backup/"
     sample_low_count = 100000
     sample_high_count = 119465
     if refresh or not os.path.isfile(pickle_dump_path):
@@ -210,7 +210,7 @@ def bucket_to_vectors(buckets, vectorMap, refresh=False, remove_duplicate = Fals
 
 if __name__ == "__main__":
     guidMap=loadGuidMap()
-    vectorMap = loadVectorMap(refresh=False, vector_file_path="../data/raw/glove.6B/glove.6B.50d.txt")
+    vectorMap = loadVectorMap(refresh=False, vector_file_path="../data/external/glove.6B/glove.6B.50d.txt")
     relationMap = loadRelationMap()
     buckets = load_buckets(guidMap, relationMap, refresh=False)
     X_train, y_label, phrases_label = bucket_to_vectors(buckets, vectorMap, refresh=False)
