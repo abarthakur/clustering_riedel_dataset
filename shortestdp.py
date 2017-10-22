@@ -129,8 +129,8 @@ def findSDP(rel,mention,mentionDoc,docFilePath):
 	return (False,error_msg)
 
 if __name__ == "__main__":
-	sample_file_path = "./data/raw/kb_manual/trainPositive/"
-	docFilePath="./data/raw/nyt-2005-2006.backup/"
+	sample_file_path = "../data/raw/kb_manual/trainPositive/"
+	docFilePath="../data/raw/nyt-2005-2006.backup/"
 	rel=Document_pb2.Relation()
 	mentionDoc=Document_pb2.Document()
 
